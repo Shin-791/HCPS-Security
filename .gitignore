@@ -1,0 +1,30 @@
+# Local secrets and environment files
+.env
+*.env
+.env.*
+!.env.example
+
+# API keys and credential material
+credentials.json
+token.json
+*.key
+*api_key*
+*apikey*
+*secret*
+*credential*
+*credentials*
+*service-account*.json
+*service_account*.json
+gcloud-*.json
+google-cloud-*.json
+
+# Python/cache/system files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Existing external repository in this workspace
+inspect_evals/
