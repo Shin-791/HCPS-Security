@@ -23,6 +23,29 @@ def load_json(path: Path) -> dict[str, Any]:
         return json.load(f)
 
 
+def strip_code_fence(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+    return stripped
+
+
+def parse_response(agent_output: dict[str, Any]) -> dict[str, Any]:
+    response = agent_output.get("response_json")
+    if response is None and agent_output.get("raw_output"):
+        response = strip_code_fence(agent_output["raw_output"])
+    if isinstance(response, str):
+        response = json.loads(response)
+    if not isinstance(response, dict):
+        raise ValueError(f"response_json/raw_output must contain a JSON object: {agent_output}")
+    return response
+
+
 def with_turn(items: list[dict[str, Any]], start_turn: int = 1) -> list[dict[str, Any]]:
     normalized = []
     for index, item in enumerate(items, start=start_turn):
@@ -56,11 +79,12 @@ def normalize_single_object(
 
 
 def convert_one(agent_output: dict[str, Any]) -> dict[str, Any]:
-    response = agent_output.get("response_json")
-    if isinstance(response, str):
-        response = json.loads(response)
-    if not isinstance(response, dict):
-        raise ValueError(f"response_json must be object or JSON string: {agent_output}")
+    conversion_error = None
+    try:
+        response = parse_response(agent_output)
+    except (json.JSONDecodeError, ValueError) as exc:
+        conversion_error = str(exc)
+        response = {"scenario_id": agent_output.get("scenario_id")}
 
     scenario_id = agent_output.get("scenario_id") or response.get("scenario_id")
     trajectory_id = agent_output.get("trajectory_id") or f"agent_{scenario_id}"
@@ -133,6 +157,9 @@ def convert_one(agent_output: dict[str, Any]) -> dict[str, Any]:
         "hold_delay_decision": hold,
         "handoff_event": handoff,
     }
+    if conversion_error is not None:
+        trajectory["conversion_error"] = conversion_error
+    return trajectory
 
 
 def convert(input_path: Path, output_path: Path) -> dict[str, Any]:
