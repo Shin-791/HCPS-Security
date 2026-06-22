@@ -3,7 +3,8 @@
 
 This script stays outside tau2/tau3 internals. It supports:
 - Gemini API key via GEMINI_API_KEY
-- Vertex AI Application Default Credentials via google-auth
+- Vertex AI Application Default Credentials via Google Gen AI style env vars:
+  GOOGLE_GENAI_USE_VERTEXAI=true, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION
 
 No API keys or credential files are read from the repository or hard-coded.
 """
@@ -57,6 +58,38 @@ REQUIRED_RESPONSE_FIELDS = [
 
 class GeminiAuthError(RuntimeError):
     pass
+
+
+def env_true(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def resolve_auth_mode(requested_auth: str) -> str:
+    if requested_auth != "auto":
+        return requested_auth
+    if env_true("GOOGLE_GENAI_USE_VERTEXAI"):
+        return "vertex-adc"
+    if os.environ.get("GEMINI_API_KEY"):
+        return "api-key"
+    return "vertex-adc"
+
+
+def resolve_model(model_arg: str | None) -> str:
+    return model_arg or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+
+
+def resolve_project(project_arg: str | None) -> str | None:
+    return project_arg or os.environ.get("GOOGLE_CLOUD_PROJECT")
+
+
+def resolve_location(location_arg: str | None) -> str | None:
+    return location_arg or os.environ.get("GOOGLE_CLOUD_LOCATION")
+
+
+def vertex_base_url(location: str) -> str:
+    if location == "global":
+        return "https://aiplatform.googleapis.com"
+    return f"https://{location}-aiplatform.googleapis.com"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -155,16 +188,28 @@ def generate_with_api_key(
 def get_adc_token() -> str:
     try:
         import google.auth
+        from google.auth.exceptions import DefaultCredentialsError, RefreshError
         from google.auth.transport.requests import Request
     except ImportError as exc:
         raise GeminiAuthError(
             "Vertex AI ADC を使うには google-auth が必要です。"
             " `pip install google-auth requests` を実行してください。"
         ) from exc
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-    credentials.refresh(Request())
+    try:
+        credentials, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        credentials.refresh(Request())
+    except DefaultCredentialsError as exc:
+        raise GeminiAuthError(
+            "Application Default Credentials が見つかりません。"
+            " `gcloud auth application-default login` を実行してください。"
+        ) from exc
+    except RefreshError as exc:
+        raise GeminiAuthError(
+            "Application Default Credentials の更新に失敗しました。"
+            " `gcloud auth application-default login` をやり直してください。"
+        ) from exc
     if not credentials.token:
         raise GeminiAuthError("Application Default Credentials のトークン取得に失敗しました。")
     return credentials.token
@@ -185,10 +230,14 @@ def generate_with_vertex_adc(
         raise GeminiAuthError(
             "Vertex AI を使うには --project または GOOGLE_CLOUD_PROJECT が必要です。"
         )
+    if not location:
+        raise GeminiAuthError(
+            "Vertex AI を使うには --location または GOOGLE_CLOUD_LOCATION が必要です。"
+        )
     token = get_adc_token()
     url = (
-        f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}"
-        f"/locations/{location}/publishers/google/models/{model}:generateContent"
+        f"{vertex_base_url(location)}/v1/projects/{project_id}/locations/{location}"
+        f"/publishers/google/models/{model}:generateContent"
     )
     payload = {
         "systemInstruction": {
@@ -250,7 +299,8 @@ def generate_one(
     project: str | None,
     location: str,
 ) -> str:
-    if auth_mode == "api-key":
+    resolved_auth = resolve_auth_mode(auth_mode)
+    if resolved_auth == "api-key":
         return generate_with_api_key(
             model=model,
             system_prompt=system_prompt,
@@ -258,7 +308,7 @@ def generate_one(
             temperature=temperature,
             timeout=timeout,
         )
-    if auth_mode == "vertex-adc":
+    if resolved_auth == "vertex-adc":
         return generate_with_vertex_adc(
             model=model,
             system_prompt=system_prompt,
@@ -268,23 +318,7 @@ def generate_one(
             project=project,
             location=location,
         )
-    if os.environ.get("GEMINI_API_KEY"):
-        return generate_with_api_key(
-            model=model,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            temperature=temperature,
-            timeout=timeout,
-        )
-    return generate_with_vertex_adc(
-        model=model,
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
-        temperature=temperature,
-        timeout=timeout,
-        project=project,
-        location=location,
-    )
+    raise ValueError(f"Unknown auth mode: {auth_mode}")
 
 
 def validate_inputs(data: dict[str, Any]) -> None:
@@ -293,8 +327,13 @@ def validate_inputs(data: dict[str, Any]) -> None:
         "operator_state_label",
         "authority_transfer_criteria",
         "expected_authority_mode",
+        "acceptable_authority_modes",
         "score_caps",
         "forbidden_actions",
+        "partial_credit_weights",
+        "required_checkpoints",
+        "hard_gate_violations",
+        "ground_truth",
     ]
     leaked = [term for term in forbidden_terms if term in forbidden_text]
     if leaked:
@@ -311,14 +350,35 @@ def run(args: argparse.Namespace) -> int:
     if not scenarios:
         raise ValueError("No scenarios found in agent input file.")
 
+    outputs = []
+    model = resolve_model(args.model)
+    resolved_auth = resolve_auth_mode(args.auth)
+    project = resolve_project(args.project)
+    location = resolve_location(args.location)
+
+    if resolved_auth == "vertex-adc":
+        if not project:
+            raise GeminiAuthError(
+                "Vertex AI を使うには --project または GOOGLE_CLOUD_PROJECT が必要です。"
+            )
+        if not location:
+            raise GeminiAuthError(
+                "Vertex AI を使うには --location または GOOGLE_CLOUD_LOCATION が必要です。"
+            )
+
     if args.dry_run:
         print("Dry run OK: prompt and agent-visible scenarios loaded.")
+        print(f"Auth mode: {resolved_auth}")
+        print(f"Model: {model}")
+        if resolved_auth == "vertex-adc":
+            print(f"Project: {project}")
+            print(f"Location: {location}")
+            print(
+                "GOOGLE_GENAI_USE_VERTEXAI: "
+                f"{os.environ.get('GOOGLE_GENAI_USE_VERTEXAI', '(unset)')}"
+            )
         print(f"Scenarios: {', '.join(s['scenario_id'] for s in scenarios)}")
         return 0
-
-    outputs = []
-    model = args.model or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
-    location = args.location or os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
 
     for scenario in scenarios:
         for trial in range(1, args.trials + 1):
@@ -337,16 +397,18 @@ def run(args: argparse.Namespace) -> int:
                     user_prompt=user_prompt,
                     temperature=args.temperature,
                     timeout=args.timeout,
-                    project=args.project,
-                    location=location,
+                    project=project,
+                    location=location or "",
                 )
                 response_json, parse_error, missing_required_fields = parse_agent_json(raw_output)
                 format_valid = parse_error is None and not missing_required_fields
             except GeminiAuthError as exc:
                 print(
                     "Gemini 認証情報が利用できません。"
-                    " GEMINI_API_KEY を設定するか、"
-                    " `gcloud auth application-default login` と GOOGLE_CLOUD_PROJECT を設定してください。\n"
+                    " APIキー方式なら GEMINI_API_KEY を設定してください。"
+                    " Vertex AI/ADC方式なら `gcloud auth application-default login` を実行し、"
+                    " GOOGLE_GENAI_USE_VERTEXAI=true、GOOGLE_CLOUD_PROJECT、"
+                    " GOOGLE_CLOUD_LOCATION を設定してください。\n"
                     f"詳細: {exc}",
                     file=sys.stderr,
                 )
@@ -378,7 +440,10 @@ def run(args: argparse.Namespace) -> int:
             "model": model,
             "temperature": args.temperature,
             "trials": args.trials,
-            "auth_mode": args.auth,
+            "auth_mode": resolved_auth,
+            "google_genai_use_vertexai": env_true("GOOGLE_GENAI_USE_VERTEXAI"),
+            "project": project if resolved_auth == "vertex-adc" else None,
+            "location": location if resolved_auth == "vertex-adc" else None,
             "prompt_path": str(prompt_path),
             "inputs_path": str(inputs_path),
             "evaluator_only_labels_excluded": True,
@@ -456,7 +521,19 @@ def main() -> None:
     parser.add_argument("--location", default=None)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    raise SystemExit(run(args))
+    try:
+        raise SystemExit(run(args))
+    except GeminiAuthError as exc:
+        print(
+            "Gemini 認証情報またはVertex AI設定が利用できません。"
+            " APIキー方式なら GEMINI_API_KEY を設定してください。"
+            " Vertex AI/ADC方式なら `gcloud auth application-default login` を実行し、"
+            " GOOGLE_GENAI_USE_VERTEXAI=true、GOOGLE_CLOUD_PROJECT、"
+            " GOOGLE_CLOUD_LOCATION を設定してください。\n"
+            f"詳細: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from exc
 
 
 if __name__ == "__main__":
