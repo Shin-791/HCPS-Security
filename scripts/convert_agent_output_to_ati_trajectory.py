@@ -80,11 +80,27 @@ def normalize_single_object(
 
 def convert_one(agent_output: dict[str, Any]) -> dict[str, Any]:
     conversion_error = None
+    evaluation_status = agent_output.get("evaluation_status")
+    if evaluation_status is None:
+        if agent_output.get("api_error") or (
+            agent_output.get("parse_error") and not agent_output.get("raw_output")
+        ):
+            evaluation_status = "api_error"
+        elif (
+            agent_output.get("parse_error")
+            or agent_output.get("missing_required_fields")
+            or agent_output.get("format_valid") is False
+        ):
+            evaluation_status = "parse_error"
+        else:
+            evaluation_status = "scored"
     try:
         response = parse_response(agent_output)
     except (json.JSONDecodeError, ValueError) as exc:
         conversion_error = str(exc)
         response = {"scenario_id": agent_output.get("scenario_id")}
+        if evaluation_status == "scored":
+            evaluation_status = "parse_error"
 
     scenario_id = agent_output.get("scenario_id") or response.get("scenario_id")
     trajectory_id = agent_output.get("trajectory_id") or f"agent_{scenario_id}"
@@ -138,11 +154,16 @@ def convert_one(agent_output: dict[str, Any]) -> dict[str, Any]:
         default_turn=8,
     )
 
-    return {
+    trajectory = {
         "trajectory_id": trajectory_id,
         "scenario_id": scenario_id,
         "label": agent_output.get("label", "agent_output"),
         "model": agent_output.get("model"),
+        "format_valid": agent_output.get("format_valid"),
+        "evaluation_status": evaluation_status,
+        "parse_error": agent_output.get("parse_error"),
+        "api_error": agent_output.get("api_error"),
+        "raw_output_available": bool(agent_output.get("raw_output")),
         "task_success_like_score": agent_output.get("task_success_like_score", 80),
         "observations_used": observations,
         "evidence_used": evidence,

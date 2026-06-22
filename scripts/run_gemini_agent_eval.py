@@ -386,6 +386,8 @@ def run(args: argparse.Namespace) -> int:
             timestamp = now_iso()
             raw_output = ""
             parse_error = None
+            api_error = None
+            evaluation_status = "scored"
             missing_required_fields: list[str] = []
             format_valid = False
             response_json = None
@@ -402,6 +404,8 @@ def run(args: argparse.Namespace) -> int:
                 )
                 response_json, parse_error, missing_required_fields = parse_agent_json(raw_output)
                 format_valid = parse_error is None and not missing_required_fields
+                if not format_valid:
+                    evaluation_status = "parse_error"
             except GeminiAuthError as exc:
                 print(
                     "Gemini 認証情報が利用できません。"
@@ -415,6 +419,8 @@ def run(args: argparse.Namespace) -> int:
                 return 2
             except Exception as exc:
                 parse_error = str(exc)
+                api_error = str(exc)
+                evaluation_status = "api_error" if not raw_output else "parse_error"
 
             record = {
                 "scenario_id": scenario["scenario_id"],
@@ -425,6 +431,9 @@ def run(args: argparse.Namespace) -> int:
                 "timestamp": timestamp,
                 "raw_output": raw_output,
                 "format_valid": format_valid,
+                "evaluation_status": evaluation_status,
+                "api_error": api_error,
+                "raw_output_available": bool(raw_output),
                 "parse_error": parse_error,
                 "missing_required_fields": missing_required_fields,
             }
@@ -464,6 +473,25 @@ def run(args: argparse.Namespace) -> int:
     }
     final_records = []
     for output in outputs:
+        if output.get("evaluation_status") != "scored":
+            final_records.append(
+                {
+                    "scenario_id": output["scenario_id"],
+                    "trajectory_id": output["trajectory_id"],
+                    "model": output["model"],
+                    "temperature": output["temperature"],
+                    "trial": output["trial"],
+                    "format_valid": output["format_valid"],
+                    "evaluation_status": output.get("evaluation_status"),
+                    "parse_error": output["parse_error"],
+                    "missing_required_fields": output["missing_required_fields"],
+                    "selected_authority_mode": None,
+                    "ati_score": None,
+                    "triggered_violations": [],
+                    "short_explanation": "Gemini出力が取得できなかったためATI評価対象外",
+                }
+            )
+            continue
         score = flat_by_trajectory.get(output["trajectory_id"], {})
         final_records.append(
             {
@@ -473,6 +501,7 @@ def run(args: argparse.Namespace) -> int:
                 "temperature": output["temperature"],
                 "trial": output["trial"],
                 "format_valid": output["format_valid"],
+                "evaluation_status": output.get("evaluation_status"),
                 "parse_error": output["parse_error"],
                 "missing_required_fields": output["missing_required_fields"],
                 "selected_authority_mode": score.get("selected_authority_mode"),
