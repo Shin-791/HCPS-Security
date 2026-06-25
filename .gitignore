@@ -26,5 +26,11 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 
+# Local Gemini/Vertex AI experiment outputs
+outputs/gemini_*.json
+outputs/ati_score_report_gemini.json
+outputs/ati_score_summary_gemini.md
+outputs/archive_ssl_error_old/
+
 # Existing external repository in this workspace
 inspect_evals/
