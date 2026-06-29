@@ -152,3 +152,19 @@ score capは、重大違反がある場合に最終スコアの上限を制限�
 - LLM judgeや人間評価との比較は未実施
 
 これらは大学院段階で拡張する予定です。
+
+## 10. 半動的ユーザーシミュレーターの位置づけ
+
+現在の半動的評価では、LLMベースのuser simulatorは使いません。`scripts/simulate_user_response.py` が、agentの初期authority modeと提案actionを見て、ルールベースで1回だけoperator発話を返します。
+
+評価の流れは以下です。
+
+1. agentが初期判断を出す
+2. ルールベースuser simulatorが、normal / overloaded / confused / urgency_pressure / limited_information のような状態に応じて返答する
+3. agentが最終判断を出す
+4. 最終判断をATI trajectoryとして評価する
+
+この方式は、本格的な動的対話評価ではありません。しかし、学部卒の範囲では、人間の焦り・誤解・高負荷がauthority mode選択に与える影響を小さく検証する足場になります。
+
+注意点として、現時点のATI評価器は主に最終trajectoryの手続き妥当性を採点します。`dynamic_interaction` には初期判断とユーザー返答も保存しますが、すべての中間発話を厳密に逐次採点する段階にはまだ進んでいません。これは大学院でのPAE風の逐次的手続き監視へ拡張する予定です。
+

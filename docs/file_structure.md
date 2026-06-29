@@ -10,7 +10,7 @@
 |---|---|
 | `data/hcps_mock/` | HCPS/SOC-OT mock scenarioとサンプルtrajectory |
 | `prompts/` | LLMエージェントへの指示 |
-| `scripts/` | 変換器・評価器・Gemini実験スクリプト |
+| `scripts/` | 変換器・評価器・Gemini実験スクリプト・半動的mock評価スクリプト |
 | `outputs/` | 実験出力や評価結果。Gemini raw outputは基本commitしない |
 | `results/` | 発表・卒研用に整理した安全な要約 |
 | `docs/` | 研究仕様・評価仕様・ファイル説明 |
@@ -87,6 +87,43 @@ Gemini/Vertex AIを使って、LLMエージェント出力を生成するスク�
 LLM出力をATI評価器が読めるtrajectory形式へ変換します。
 
 この段階では、LLM judgeは使いません。semi-structured JSONをルールベースに正規化します。
+
+### `scripts/simulate_user_response.py`
+
+ルールベースのユーザー返答生成器です。
+
+入力として、scenario、agentの初期authority mode、proposed actionを受け取り、operator役の返答を1つ生成します。
+
+扱うユーザー状態の例:
+
+- `normal`
+- `overloaded`
+- `confused`
+- `urgency_pressure`
+- `limited_information`
+
+これはLLMユーザーシミュレーターではありません。学部卒で扱える範囲に収めるため、発話テンプレートを使った小さなシミュレーターにしています。
+
+### `scripts/run_rule_based_dynamic_eval.py`
+
+2ターン程度の半動的mock評価を実行します。
+
+流れ:
+
+1. `agent_eval_inputs.json` を読む
+2. mockの初期agent判断を作る
+3. `simulate_user_response.py` でユーザー返答を作る
+4. mockの最終agent判断を作る
+5. `dynamic_sample_trajectories.json` にATI trajectoryとして保存する
+6. 既存のATI評価器で採点する
+
+実Gemini APIやVertex AIは呼びません。
+
+### `data/hcps_mock/dynamic_sample_trajectories.json`
+
+半動的評価用のサンプルtrajectoryです。
+
+既存3シナリオに対して、初期agent判断、ユーザー返答、最終agent判断を `dynamic_interaction` に保存しています。ATI評価器が読む主要フィールドは既存trajectory形式に合わせているため、静的評価器を壊さずに評価できます。
 
 ### `scripts/evaluate_authority_transfer.py`
 
@@ -165,3 +202,29 @@ results/gemini_3trial_summary.md  (安全な要約)
 - `results/gemini_3trial_summary.md`
 
 コードの詳細を説明する場合は、`scripts/evaluate_authority_transfer.py` を中心に見るとよいです。
+
+## 5. 半動的評価の流れ
+
+半動的評価では、LLMやGeminiを呼ばず、mockの初期判断と最終判断を使います。
+
+```text
+agent_eval_inputs.json
+        |
+        v
+mock initial agent decision
+        |
+        v
+simulate_user_response.py
+        |
+        v
+mock final agent decision
+        |
+        v
+dynamic_sample_trajectories.json
+        |
+        v
+evaluate_authority_transfer.py
+```
+
+この仕組みにより、静的な1回回答だけでなく、「ユーザーが焦る・誤解する・高負荷で短い説明を求める」状況に対して、agentが最終的に安全側へ切り替えられるかを小さく確認できます。
+

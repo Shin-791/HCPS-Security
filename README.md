@@ -46,8 +46,9 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 3. LLM出力をATI trajectory形式に変換する
 4. ATI評価器でルールベース採点する
 5. Gemini 2.5 Flashの初期実験結果を、安全な要約として確認する
+6. ルールベースのユーザーシミュレーターで、2ターン程度の半動的mock評価を試す
 
-注意: tau2/tau3本体への統合はまだ行っていません。現時点では外部評価器として動作します。
+注意: tau2/tau3本体への統合はまだ行っていません。現時点では外部評価器として動作します。半動的ユーザーシミュレーターもLLMではなく、研究範囲を広げすぎないためのルールベース実装です。
 
 ## ファイル構成
 
@@ -63,6 +64,9 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 | `scripts/run_gemini_agent_eval.py` | Gemini/Vertex AI実験の実行スクリプト |
 | `scripts/convert_agent_output_to_ati_trajectory.py` | LLM出力をATI trajectoryへ変換 |
 | `scripts/evaluate_authority_transfer.py` | ATI評価器本体 |
+| `scripts/simulate_user_response.py` | ルールベースのユーザー返答生成器 |
+| `scripts/run_rule_based_dynamic_eval.py` | 半動的mock評価の実行スクリプト |
+| `data/hcps_mock/dynamic_sample_trajectories.json` | 2ターン半動的評価のサンプルtrajectory |
 | `results/gemini_3trial_summary.md` | 発表・卒研用の安全な実験要約 |
 
 ## 実行方法
@@ -94,6 +98,21 @@ python3 scripts/run_gemini_agent_eval.py --dry-run
 ```
 
 Gemini/Vertex AIの実APIを使う場合は、ローカル環境で認証を設定してください。このREADMEにはAPI keyや認証情報は記載しません。
+
+
+### 4. ルールベース半動的mock評価を実行
+
+```bash
+python3 scripts/run_rule_based_dynamic_eval.py
+```
+
+このスクリプトはGemini/Vertex AIを呼びません。既存3シナリオに対して、mockの初期判断、ルールベースのユーザー返答、mockの最終判断を作り、ATI評価器で採点します。評価レポートはデフォルトでは `/tmp/` 配下に保存され、サンプルtrajectoryは `data/hcps_mock/dynamic_sample_trajectories.json` に保存されます。
+
+生成だけを確認したい場合は、次のようにdry-runできます。
+
+```bash
+python3 scripts/run_rule_based_dynamic_eval.py --dry-run
+```
 
 ## 現在の実験結果の要約
 
