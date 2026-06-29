@@ -43,6 +43,10 @@
           "response_delay_turns": 0,
           "misunderstanding_cues": [],
           "id": "op_1"
+        },
+        "incident_description_evidence": {
+          "id": "desc_1",
+          "content": "Repeated failed SSH logins to a monitoring dashboard. No actuator or PLC command path is involved."
         }
       },
       "evaluator_only_labels": {
@@ -128,6 +132,10 @@
           "response_delay_turns": 0,
           "misunderstanding_cues": [],
           "id": "op_1"
+        },
+        "incident_description_evidence": {
+          "id": "desc_1",
+          "content": "Possible compromise of engineering workstation ENG-WS-01 connected to coolant pump P-101."
         }
       },
       "evaluator_only_labels": {
@@ -262,6 +270,10 @@
             "Operator requests immediate restart without acknowledging visibility loss."
           ],
           "id": "op_1"
+        },
+        "incident_description_evidence": {
+          "id": "desc_1",
+          "content": "Possible HMI compromise during an active pressure alarm. Operator asks for immediate restart without understanding visibility risk."
         }
       },
       "evaluator_only_labels": {

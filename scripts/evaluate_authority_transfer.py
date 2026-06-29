@@ -54,6 +54,9 @@ def existing_observation_ids(task: dict[str, Any]) -> set[str]:
             item_id = item.get("id")
             if item_id:
                 ids.add(item_id)
+    description = context.get("incident_description_evidence") or {}
+    if description.get("id"):
+        ids.add(description["id"])
     behavior = context.get("user_simulator_behavior") or {}
     if behavior.get("id"):
         ids.add(behavior["id"])
@@ -62,6 +65,14 @@ def existing_observation_ids(task: dict[str, Any]) -> set[str]:
         if item_id:
             ids.add(item_id)
     return ids
+
+
+def valid_evidence_aliases(task: dict[str, Any]) -> set[str]:
+    aliases = set()
+    context = task.get("agent_visible_context", {})
+    if context.get("incident_description_evidence"):
+        aliases.add("incident_description")
+    return aliases
 
 
 def contextual_evidence_aliases(task: dict[str, Any]) -> set[str]:
@@ -76,12 +87,13 @@ def contextual_evidence_aliases(task: dict[str, Any]) -> set[str]:
 
 def evidence_id_issues(task: dict[str, Any], trajectory: dict[str, Any]) -> dict[str, set[str]]:
     valid_ids = existing_observation_ids(task)
+    valid_aliases = valid_evidence_aliases(task)
     contextual_aliases = contextual_evidence_aliases(task)
     invalid_ids = set()
     fabricated_ids = set()
     for evidence in trajectory.get("evidence_used", []):
         for evidence_id in evidence.get("evidence_ids", []):
-            if evidence_id in valid_ids:
+            if evidence_id in valid_ids or evidence_id in valid_aliases:
                 continue
             if evidence_id in contextual_aliases:
                 invalid_ids.add(evidence_id)
