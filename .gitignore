@@ -30,6 +30,9 @@ __pycache__/
 outputs/gemini_*.json
 outputs/ati_score_report_gemini.json
 outputs/ati_score_summary_gemini.md
+outputs/second_turn_gemini_raw/
+outputs/second_turn_gemini_*.json
+outputs/second_turn_ati_*.json
 outputs/archive_ssl_error_old/
 
 # Existing external repository in this workspace
