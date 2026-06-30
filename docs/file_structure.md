@@ -118,6 +118,21 @@ LLM出力をATI評価器が読めるtrajectory形式へ変換します。
 
 生成物は `generated_prompts/` に出力できます。このディレクトリはローカル実験用で、誤commitを避けるためignore対象にしています。
 
+
+### `scripts/run_second_turn_gemini_eval.py`
+
+`generated_prompts/second_turn_prompts.jsonl` を読み、将来の2ターン目Gemini実験で送るprompt recordを処理するrunnerです。
+
+重要な点:
+
+- dry-runではGemini/Vertex AIを呼ばない
+- dry-runではAPI key、ADC、credentials、tokenを読まない
+- 実API実行には `--execute` が必須
+- raw responseは `outputs/second_turn_gemini_raw/` に保存する
+- 保存したraw responseは `normalize_second_turn_gemini_outputs.py` で正規化する
+
+このスクリプトは、2ターン目実験を安全に実行するための入口です。実行結果そのものを卒研・論文に使う場合は、raw outputではなく、ATI trajectory、score report、安全なsummaryへ変換してから扱います。
+
 ### `scripts/run_rule_based_dynamic_eval.py`
 
 2ターン程度の半動的mock評価を実行します。
@@ -165,6 +180,9 @@ ATI評価器本体です。
 - `outputs/ati_score_report_gemini.json`
 - `outputs/ati_score_summary_gemini.md`
 - `outputs/archive_ssl_error_old/`
+- `outputs/second_turn_gemini_raw/`
+- `outputs/second_turn_gemini_*.json`
+- `outputs/second_turn_ati_*.json`
 
 ### `results/`
 

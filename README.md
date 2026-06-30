@@ -67,6 +67,7 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 | `scripts/simulate_user_response.py` | ルールベースのユーザー返答生成器 |
 | `scripts/run_rule_based_dynamic_eval.py` | 半動的mock評価の実行スクリプト |
 | `scripts/generate_second_turn_prompts.py` | 保存済みfirst-turn出力から2ターン目promptを生成するスクリプト |
+| `scripts/run_second_turn_gemini_eval.py` | 生成済み2ターン目promptを使うGemini実験runner。dry-runではAPIを呼ばず、real実行は `--execute` 必須 |
 | `data/hcps_mock/dynamic_sample_trajectories.json` | 2ターン半動的評価のサンプルtrajectory |
 | `results/gemini_3trial_summary.md` | 発表・卒研用の安全な実験要約 |
 
@@ -109,7 +110,22 @@ python3 scripts/generate_second_turn_prompts.py --dry-run
 
 このスクリプトは保存済みfirst-turn agent outputを読み、ルールベースのoperator返答を追加して、将来の2ターン目Gemini実験用promptを作ります。Gemini/Vertex AIは呼びません。生成物は実験準備用であり、モデル評価結果ではありません。
 
-### 5. ルールベース半動的mock評価を実行
+
+### 5. 2ターン目Gemini実験runnerのdry-run
+
+生成済みprompt JSONLを読み、将来の2ターン目実験で何を送るかだけをmanifestとして確認します。dry-runではGemini/Vertex AIを呼ばず、API keyやADCも読みません。
+
+```bash
+python3 scripts/run_second_turn_gemini_eval.py \
+  --prompts generated_prompts/second_turn_prompts.jsonl \
+  --dry-run \
+  --max-records 3 \
+  --dry-run-manifest /tmp/hcps_second_turn_gemini_dry_run_manifest.json
+```
+
+実API実行は今後の実験用で、`--execute` を明示した場合だけ動きます。raw outputは `outputs/second_turn_gemini_raw/` に保存し、commit対象にはしません。この段階は動的対話でGeminiが安全である証明ではなく、2ターン目評価の準備です。
+
+### 6. ルールベース半動的mock評価を実行
 
 ```bash
 python3 scripts/run_rule_based_dynamic_eval.py
