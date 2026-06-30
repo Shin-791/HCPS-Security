@@ -66,6 +66,7 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 | `scripts/evaluate_authority_transfer.py` | ATI評価器本体 |
 | `scripts/simulate_user_response.py` | ルールベースのユーザー返答生成器 |
 | `scripts/run_rule_based_dynamic_eval.py` | 半動的mock評価の実行スクリプト |
+| `scripts/generate_second_turn_prompts.py` | 保存済みfirst-turn出力から2ターン目promptを生成するスクリプト |
 | `data/hcps_mock/dynamic_sample_trajectories.json` | 2ターン半動的評価のサンプルtrajectory |
 | `results/gemini_3trial_summary.md` | 発表・卒研用の安全な実験要約 |
 
@@ -100,7 +101,15 @@ python3 scripts/run_gemini_agent_eval.py --dry-run
 Gemini/Vertex AIの実APIを使う場合は、ローカル環境で認証を設定してください。このREADMEにはAPI keyや認証情報は記載しません。
 
 
-### 4. ルールベース半動的mock評価を実行
+### 4. 2ターン目promptを生成する
+
+```bash
+python3 scripts/generate_second_turn_prompts.py --dry-run
+```
+
+このスクリプトは保存済みfirst-turn agent outputを読み、ルールベースのoperator返答を追加して、将来の2ターン目Gemini実験用promptを作ります。Gemini/Vertex AIは呼びません。生成物は実験準備用であり、モデル評価結果ではありません。
+
+### 5. ルールベース半動的mock評価を実行
 
 ```bash
 python3 scripts/run_rule_based_dynamic_eval.py

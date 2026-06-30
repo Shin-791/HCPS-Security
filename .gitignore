@@ -34,3 +34,6 @@ outputs/archive_ssl_error_old/
 
 # Existing external repository in this workspace
 inspect_evals/
+# Generated prompt artifacts for local experiments
+generated_prompts/
+

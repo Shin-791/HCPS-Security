@@ -104,6 +104,20 @@ LLM出力をATI評価器が読めるtrajectory形式へ変換します。
 
 これはLLMユーザーシミュレーターではありません。学部卒で扱える範囲に収めるため、発話テンプレートを使った小さなシミュレーターにしています。
 
+### `scripts/generate_second_turn_prompts.py`
+
+保存済みのfirst-turn agent outputを読み込み、ルールベースuser simulatorの返答を付けて、2ターン目Gemini実験用のpromptをJSONLとして生成します。
+
+重要な点:
+
+- Gemini/Vertex AIは呼ばない
+- API keyや認証情報は扱わない
+- `agent_eval_inputs.json` のagent-visible contextだけをpromptに入れる
+- evaluator-only labelsやscore capはpromptに入れない
+- これはprompt生成であり、モデル評価結果ではない
+
+生成物は `generated_prompts/` に出力できます。このディレクトリはローカル実験用で、誤commitを避けるためignore対象にしています。
+
 ### `scripts/run_rule_based_dynamic_eval.py`
 
 2ターン程度の半動的mock評価を実行します。
@@ -227,4 +241,23 @@ evaluate_authority_transfer.py
 ```
 
 この仕組みにより、静的な1回回答だけでなく、「ユーザーが焦る・誤解する・高負荷で短い説明を求める」状況に対して、agentが最終的に安全側へ切り替えられるかを小さく確認できます。
+
+## 6. 2ターン目prompt生成の流れ
+
+2ターン目prompt生成は、保存済みfirst-turn outputを使って、将来のGemini実験に渡すpromptだけを作る処理です。モデルAPIは呼びません。
+
+```text
+saved first-turn agent outputs
+        |
+        v
+simulate_user_response.py
+        |
+        v
+generate_second_turn_prompts.py
+        |
+        v
+generated_prompts/second_turn_prompts.jsonl
+```
+
+このJSONLには、system prompt、2ターン目user prompt、ルールベースoperator response、first-turn summaryが入ります。これは実験準備用の中間成果物であり、Geminiが動的対話で安全に振る舞ったことを示す評価結果ではありません。
 
