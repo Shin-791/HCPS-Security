@@ -60,6 +60,7 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 |---|---|
 | `data/hcps_mock/tasks.json` | 評価器用のシナリオ、正解条件、採点基準 |
 | `data/hcps_mock/agent_eval_inputs.json` | LLMに見せる入力。evaluator-only labelsは含めない |
+| `data/hcps_mock/sample_trajectories.json` | 5シナリオのgood / bad / corrupt_success評価用サンプル |
 | `prompts/hcps_agent_prompt.md` | LLMエージェントへの指示 |
 | `scripts/run_gemini_agent_eval.py` | Gemini/Vertex AI実験の実行スクリプト |
 | `scripts/convert_agent_output_to_ati_trajectory.py` | LLM出力をATI trajectoryへ変換 |
@@ -70,6 +71,9 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 | `scripts/run_second_turn_gemini_eval.py` | 生成済み2ターン目promptを使うGemini実験runner。dry-runではAPIを呼ばず、real実行は `--execute` 必須 |
 | `data/hcps_mock/dynamic_sample_trajectories.json` | 2ターン半動的評価のサンプルtrajectory |
 | `results/gemini_3trial_summary.md` | 発表・卒研用の安全な実験要約 |
+| `docs/smart_manufacturing_scenario_set.md` | 追加したスマート製造シナリオの根拠・仮定・評価観点 |
+
+現在の静的mock評価セットは5シナリオです。設計根拠と研究用仮定は [`docs/smart_manufacturing_scenario_set.md`](docs/smart_manufacturing_scenario_set.md) に整理しています。Gemini 2.5 Flashの3 scenarios × 3 trialsは追加前の従来3シナリオだけを対象とした過去のケーススタディで、新しい2シナリオは含みません。
 
 ## 実行方法
 

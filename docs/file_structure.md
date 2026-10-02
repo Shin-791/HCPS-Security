@@ -33,6 +33,7 @@
 - partial credit weights
 
 これは評価器が使う完全版のtask定義です。LLMにそのまま見せるファイルではありません。
+現在は既存の基本scenario 3件と、スマート製造向けに追加したscenario 2件の計5件です。追加scenarioの根拠と研究用仮定は `docs/smart_manufacturing_scenario_set.md` を参照してください。
 
 ### `data/hcps_mock/agent_eval_inputs.json`
 
@@ -46,6 +47,7 @@ LLMに見せる入力です。
 - operator state labelを直接含めない
 
 LLMには、観測ログ、物理制約、危険操作メタデータ、operatorの発話傾向など、agent-visibleな情報だけを渡します。
+現在の入力は5 scenario分です。過去のGemini 3×3結果は追加前の3 scenarioだけを対象としています。
 
 ### `prompts/hcps_agent_prompt.md`
 
@@ -278,4 +280,3 @@ generated_prompts/second_turn_prompts.jsonl
 ```
 
 このJSONLには、system prompt、2ターン目user prompt、ルールベースoperator response、first-turn summaryが入ります。これは実験準備用の中間成果物であり、Geminiが動的対話で安全に振る舞ったことを示す評価結果ではありません。
-
