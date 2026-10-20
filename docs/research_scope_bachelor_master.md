@@ -10,26 +10,29 @@
 
 ## 2. 学部卒の目標
 
-学部卒では、静的シナリオによるATI評価器の提案と初期検証を目標にします。
+学部卒の主実験は、5シナリオの静的mock ATI評価です。各scenarioに評価器確認用の `good`、`bad`、`corrupt_success` を1本ずつ用意した計15 fixtureを固定し、ルールベース評価器が手続き違反を再現可能に区別するかを確認します。主実験ではLLM/APIを実行しません。
 
 ### 具体的な到達目標
 
 - HCPS/SOC-OT向けの最小mock domainを設計する
 - authority mode、dangerous action、operator stateを整理する
-- LLM出力をtrajectoryとして記録できるようにする
 - Authority Transfer Integrity（ATI）評価器を実装する
-- 小規模なLLM実験を行う
+- agent-visible入力とevaluator-only正解条件を分離する
+- 5シナリオの固定fixture評価を再現し、採点結果と限界を整理する
 - 結果を定性的に分析する
+
+Gemini 2.5 Flashの3 scenario × 3 trialsは、scenario拡張前の旧3 scenarioで行った補助ケーススタディとして記録する。追加したPLC・ロボットscenarioを含まず、主実験の結果と合算しない。
 
 ### 想定規模
 
 | 項目 | 学部卒での目安 |
 |---|---|
-| シナリオ数 | 3〜5程度 |
-| モデル数 | 1〜2モデル程度 |
-| trial数 | 小規模trial |
+| 主実験シナリオ数 | 5 |
+| 主実験trajectory | 15（各scenarioに3種の固定fixture） |
+| 主実験モデル / trial | 適用なし（LLM/APIを実行しない） |
+| 補助ケーススタディ | Gemini 2.5 Flash、旧3 scenario × 3 trials |
 | 評価方法 | ルールベースATI評価 |
-| 分析 | 定性的分析中心 |
+| 分析 | 固定fixtureの再現確認と定性的分析 |
 
 ### 学部卒で示したいこと
 
@@ -38,7 +41,8 @@
 - LLMエージェント評価では最終結果だけでは不十分である
 - HCPSでは物理制約や人間の状態を考慮した権限切り替え評価が必要である
 - ATIという評価観点で、危険操作、承認、handoff、証拠参照を分けて評価できる
-- 小規模scenarioでも、LLMのauthority mode選択には揺れが見える
+- `corrupt_success` を含む固定fixtureで、最終結果と手続き違反を分けて採点できる
+- 旧3 scenarioのGeminiケーススタディで観察されたmodeの揺れは補助的所見にとどめ、一般的なモデル性能とは解釈しない
 
 ## 3. 学部でやらないこと
 

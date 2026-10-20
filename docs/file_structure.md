@@ -33,7 +33,7 @@
 - partial credit weights
 
 これは評価器が使う完全版のtask定義です。LLMにそのまま見せるファイルではありません。
-現在は既存の基本scenario 3件と、スマート製造向けに追加したscenario 2件の計5件です。追加scenarioの根拠と研究用仮定は `docs/smart_manufacturing_scenario_set.md` を参照してください。
+現在は既存の基本scenario 3件と、スマート製造向けに追加したscenario 2件の計5件です。卒研の主実験はこの5 scenarioを対象にした静的ATI評価です。追加2件は公開資料・実証研究からリスク構造を抽出し研究用仮定を加えた模擬scenarioで、特定の実工場・インシデントの再現ではありません。概要は `docs/smart_manufacturing_scenario_set.md`、出典と仮定の対応は `docs/smart_manufacturing_scenario_case_mapping.md` を参照してください。
 
 ### `data/hcps_mock/agent_eval_inputs.json`
 
@@ -170,6 +170,20 @@ ATI評価器本体です。
 6. score capとsoft penaltyを適用する
 7. JSON reportとMarkdown summaryを出力する
 
+### `docs/final_static_experiment_protocol.md`
+
+卒研の主実験である5 scenarioの静的ATI評価について、固定条件、評価器version、入力fingerprint、採点・集計方法、再現コマンド、解釈上の限界をまとめています。採点結果そのものは `results/static_ati_repro_summary.md` を参照してください。
+
+### `docs/smart_manufacturing_scenario_case_mapping.md`
+
+追加2 scenarioについて、公開資料・実証研究で確認できる知見、抽象化したリスク、scenarioに加えた研究用仮定を区別して説明します。これらは実インシデントの再現ではありません。
+
+### 主実験と補助ケーススタディ
+
+- **主実験:** 5 scenario × `good` / `bad` / `corrupt_success` の固定mock trajectory、計15件を静的ATI評価器で採点します。独立したLLM trialや統計標本ではありません。
+- **補助ケーススタディ:** 保存済みGemini 2.5 Flashの3 scenario × 3 trials。シナリオ拡張前の旧3 scenarioのみで、主実験には含めず、5 scenarioのモデル性能を示すものでもありません。
+- 半動的・2ターン評価は実験拡張であり、卒研の静的主実験とは分けて扱います。
+
 ### `outputs/`
 
 評価器や実験スクリプトの出力先です。
@@ -193,12 +207,36 @@ ATI評価器本体です。
 例:
 
 - `results/gemini_3trial_summary.md`
+- `results/static_ati_repro_summary.md`
 
 このファイルには、raw outputや認証情報ではなく、分析結果だけを載せます。
+静的ATI主実験の固定条件、版、集計規則、mode分布、再現コマンドは `docs/final_static_experiment_protocol.md` を参照してください。
 
 ## 4. ATI評価の流れ
 
-基本的な流れは以下です。
+### 卒研の主実験: 静的mock trajectory
+
+```text
+tasks.json (evaluator-only 正解条件・採点基準)
+        |
+        v
+sample_trajectories.json (固定fixture: 5 scenarios x 3 labels)
+        |
+        v
+evaluate_authority_transfer.py
+        |
+        v
+score report / Markdown summary
+        |
+        v
+results/static_ati_repro_summary.md (安全な再現要約)
+```
+
+この主経路ではLLMを呼びません。`agent_eval_inputs.json`は別途、agent-visible情報とevaluator-only正解ラベルを分離できているか確認するための入力仕様です。
+
+### 補助ケーススタディ: 保存済み旧3 scenarioのGemini出力
+
+以下はGemini 2.5 Flashの補助ケーススタディに関する処理の流れです。
 
 ```text
 agent_eval_inputs.json
@@ -225,14 +263,19 @@ ATI score report / summary
 results/gemini_3trial_summary.md  (安全な要約)
 ```
 
+Geminiの9 trialは現在の5 scenario主実験とは別の旧3 scenarioケーススタディです。5 scenario全体のモデル評価や安全性の証明として扱いません。
+
 ## 5. 学部卒での使い方
 
 学部卒では、主に以下を見れば研究全体を説明できます。
 
 - `README.md`
 - `docs/ati_evaluation_spec.md`
+- `docs/final_static_experiment_protocol.md`
+- `docs/smart_manufacturing_scenario_case_mapping.md`
 - `docs/research_scope_bachelor_master.md`
 - `docs/file_structure.md`
+- `results/static_ati_repro_summary.md`
 - `results/gemini_3trial_summary.md`
 
 コードの詳細を説明する場合は、`scripts/evaluate_authority_transfer.py` を中心に見るとよいです。

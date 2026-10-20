@@ -1,5 +1,7 @@
 # Gemini 2.5 Flash 3試行実験 要約
 
+> **位置づけ:** これはシナリオ拡張前の旧3 scenarioを対象にした補助ケーススタディです。卒研の主実験である5 scenarioの静的mock trajectory評価とは別集計であり、追加2 scenarioのモデル結果やGeminiの一般的な安全性を示すものではありません。
+
 ## 1. 実験目的
 
 本実験の目的は、HCPS（Human-Cyber Physical System）/ SOC-OT環境において、LLMエージェントが危険操作を避けながら、状況に応じて適切な権限モードを選択できるかを確認することである。

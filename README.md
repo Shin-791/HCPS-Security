@@ -45,8 +45,8 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 2. LLMエージェントに見せる入力だけを生成・管理する
 3. LLM出力をATI trajectory形式に変換する
 4. ATI評価器でルールベース採点する
-5. Gemini 2.5 Flashの初期実験結果を、安全な要約として確認する
-6. ルールベースのユーザーシミュレーターで、2ターン程度の半動的mock評価を試す
+5. 旧3 scenarioで行ったGemini 2.5 Flashの補助ケーススタディを、安全な要約として確認する
+6. 研究拡張として、ルールベースのユーザーシミュレーターによる2ターン程度の半動的mock評価を試す
 
 注意: tau2/tau3本体への統合はまだ行っていません。現時点では外部評価器として動作します。半動的ユーザーシミュレーターもLLMではなく、研究範囲を広げすぎないためのルールベース実装です。
 
@@ -72,8 +72,16 @@ ATIは、LLMエージェントの回答を以下の観点から採点します�
 | `data/hcps_mock/dynamic_sample_trajectories.json` | 2ターン半動的評価のサンプルtrajectory |
 | `results/gemini_3trial_summary.md` | 発表・卒研用の安全な実験要約 |
 | `docs/smart_manufacturing_scenario_set.md` | 追加したスマート製造シナリオの根拠・仮定・評価観点 |
+| `docs/smart_manufacturing_scenario_case_mapping.md` | PLC・ロボットscenarioと公開資料の対応、出典事実と研究用仮定の区別 |
+| `docs/final_static_experiment_protocol.md` | 卒研の静的ATI主実験の固定条件・集計・再現手順 |
 
-現在の静的mock評価セットは5シナリオです。設計根拠と研究用仮定は [`docs/smart_manufacturing_scenario_set.md`](docs/smart_manufacturing_scenario_set.md) に整理しています。Gemini 2.5 Flashの3 scenarios × 3 trialsは追加前の従来3シナリオだけを対象とした過去のケーススタディで、新しい2シナリオは含みません。
+## 卒研の主実験
+
+卒研の主実験は、**5シナリオの静的ATI評価**です。5件のmock scenarioそれぞれに評価器確認用の `good`、`bad`、`corrupt_success` trajectoryを用意し、固定した計15件をルールベース評価器で再現採点します。これはモデル性能のtrial実験ではなく、定義した手続き違反を評価器が区別できるかを確認するfixture評価です。条件・集計・再現コマンドは [`docs/final_static_experiment_protocol.md`](docs/final_static_experiment_protocol.md)、結果は [`results/static_ati_repro_summary.md`](results/static_ati_repro_summary.md) を参照してください。
+
+追加した `sm_plc_command_001` と `sm_robot_motion_001` は、PLCに関する公開マルウェア技術解析・製造ICSのラボ実証研究と、産業用ロボットの実験研究からリスク構造を抽出し、設備名・ログ・工程や作業者の状態などを研究用仮定として加えた**模擬scenario**です。実工場や特定インシデントの再現ではありません。出典と仮定の詳しい対応は [`docs/smart_manufacturing_scenario_case_mapping.md`](docs/smart_manufacturing_scenario_case_mapping.md) を参照してください。
+
+Gemini 2.5 Flashの3 scenarios × 3 trialsは、シナリオ拡張前の旧3 scenarioだけを対象とした**補助ケーススタディ**です。追加2 scenarioは含まず、5 scenarioの主実験と合算しません。結果は [`results/gemini_3trial_summary.md`](results/gemini_3trial_summary.md) にあります。
 
 ## 実行方法
 
@@ -143,9 +151,9 @@ python3 scripts/run_rule_based_dynamic_eval.py
 python3 scripts/run_rule_based_dynamic_eval.py --dry-run
 ```
 
-## 現在の実験結果の要約
+## 補助ケーススタディ: Gemini静的実験
 
-Gemini 2.5 Flashで、3 scenarios × 3 trialsの初期実験を行いました。安全な要約は [`results/gemini_3trial_summary.md`](results/gemini_3trial_summary.md) に整理しています。
+以下はシナリオ拡張前の旧3 scenarioを対象にした補助ケーススタディです。卒研の主実験である5 scenarioの静的mock評価とは独立して扱い、追加2 scenarioを含む結果やモデル安全性の証明として解釈しません。安全な要約は [`results/gemini_3trial_summary.md`](results/gemini_3trial_summary.md) にあります。
 
 ATI平均スコアは以下です。
 
@@ -167,11 +175,10 @@ ATI平均スコアは以下です。
 
 学部卒では、静的シナリオを用いたATI評価器の提案と初期検証を目標にします。
 
-- 3〜5シナリオ程度
-- 1〜2モデル程度
-- 小規模trial
-- ルールベースATI評価器
-- 結果の定性的分析
+- 5 scenario × 3種類の固定fixture（計15 trajectory）を使う静的ATI主実験
+- ルールベース評価器が手続き違反を再現可能に区別することの確認
+- 結果と限界の定性的分析
+- Gemini 2.5 Flash旧3 scenario × 3 trialsは補助ケーススタディとして分離し、主実験と合算しない
 
 ## 院での拡張予定
 

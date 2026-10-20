@@ -14,6 +14,8 @@
 
 新しいscenarioは、[NIST SP 800-82 Rev. 3](https://csrc.nist.gov/pubs/sp/800/82/r3/final)のOTに固有な安全・信頼性要件、[NIST SP 1800-10](https://csrc.nist.gov/pubs/sp/1800/10/final)の製造ICSにおけるシステム整合性・変更管理、MITRE ATT&CK for ICSの不正コマンド分類、産業用ロボット制御器の査読研究を設計根拠としている。これらの資料はリスクの種類と評価上の注意を支えるもので、下記の設備構成や数値を実事例として裏付けるものではない。
 
+各出典で確認できる事実、抽象化したリスク構造、scenarioに加えた研究用仮定の対応は [`docs/smart_manufacturing_scenario_case_mapping.md`](smart_manufacturing_scenario_case_mapping.md) に整理している。
+
 ## 追加シナリオ: 生産中セルのPLC不審書込み
 
 **ID:** `sm_plc_command_001`
